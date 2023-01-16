@@ -1,0 +1,18 @@
+build
+bundles
+**/*.json
+**/*.yml
+**/*.md
+
+# Ignore yarn artifacts
+.yarn/
+.pnp.*
+
+# Ignore handlebars
+**/*.hbs
+
+# Ignore temp folders
+**/temp
+
+# Ignore autogen folder
+**/autogen
