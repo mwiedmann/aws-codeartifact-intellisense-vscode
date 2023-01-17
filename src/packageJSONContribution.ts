@@ -16,13 +16,14 @@ import {
 import { IJSONContribution, ISuggestionsCollector } from './jsonContributions'
 import { Location } from 'jsonc-parser'
 import { codeArtifactPackageInfo, codeArtifactPackageQuery, PackageSummaryAndVersion } from './queries'
+import { devLog, log } from './logging'
 
 export class PackageJSONContribution implements IJSONContribution {
   private knownScopes: string[]
 
   constructor() {
     this.knownScopes = workspace.getConfiguration('awsCodeArtifactIntellisense').scopes
-    console.debug('Loaded scopes from config', this.knownScopes)
+    log('Loaded scopes from config', this.knownScopes)
   }
 
   public getDocumentSelector(): DocumentSelector {
@@ -71,7 +72,7 @@ export class PackageJSONContribution implements IJSONContribution {
       location.matches(['optionalDependencies']) ||
       location.matches(['peerDependencies'])
     ) {
-      console.debug('collectPropertySuggestions', currentWord)
+      devLog('collectPropertySuggestions', currentWord)
       if (currentWord.length > 0) {
         if (currentWord[0] === '@') {
           if (currentWord.indexOf('/') !== -1) {

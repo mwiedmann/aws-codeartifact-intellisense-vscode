@@ -4,11 +4,13 @@ import { defaultProvider } from '@aws-sdk/credential-provider-node'
 import { parseSyml } from '@yarnpkg/parsers'
 import fs from 'fs'
 import path from 'path'
+import { devLog, log } from './logging'
 
 type AuthorizationTokenParams = {
   domain: string
   domainOwner: string
   region: string
+  registryName: string
 }
 
 type CAClient = {
@@ -16,7 +18,16 @@ type CAClient = {
   registryInfo: AuthorizationTokenParams
 }
 
-let registryUrl: string
+type RegistryInfo = {
+  registryUrl: string
+  awsProfile: string
+}
+
+let registryInfo: RegistryInfo = {
+  registryUrl: '',
+  awsProfile: '',
+}
+
 let cachedClient: CAClient | undefined
 
 /**
@@ -26,30 +37,48 @@ let cachedClient: CAClient | undefined
  * @param forceCheck Search for and read the yarn config even if a registry url is already set
  * @returns void
  */
-export const setRegistryUrl = (filename: string, forceCheck = false) => {
+export const setRegistryInfo = (filename: string, forceCheck = false) => {
   // Once the registryUrl is set, we will skip checking for a new one unless forced
   // TODO: Its possible to have multiple registries, even by scope
   // We could refactor this extension to support that, but for now it supports 1 registry
-  if (registryUrl && !forceCheck) {
+  if (registryInfo.registryUrl && registryInfo.awsProfile && !forceCheck) {
     return
   }
 
   const yarnrcName = '.yarnrc.yml'
+  const pluginName = '.yarn-plugin-aws-codeartifact.yml'
   let currentFolder = path.dirname(filename)
-  let newRegistryUrl = ''
+  let newRegistryInfo: RegistryInfo = {
+    registryUrl: '',
+    awsProfile: '',
+  }
 
-  // Find yarnrc.yml file
+  // Find yarnrc.yml and plugin files
   // There is also a global config to check?
   // Also, env vars can hold the value as well?
   do {
+    // Check for .yarnrc.yml
     const yarnrcPath = path.join(currentFolder, yarnrcName)
-    console.debug('checking', yarnrcPath)
-
-    if (fs.existsSync(yarnrcPath)) {
+    devLog('checking for .yarnrc', yarnrcPath)
+    if (!newRegistryInfo.registryUrl && fs.existsSync(yarnrcPath)) {
       const content = fs.readFileSync(yarnrcPath, `utf8`)
       const data = parseSyml(content)
-      newRegistryUrl = data['npmRegistryServer']
-      console.debug('registryUrl', newRegistryUrl)
+      newRegistryInfo.registryUrl = data['npmRegistryServer'] || ''
+      log('registryUrl', newRegistryInfo.registryUrl)
+    }
+
+    // Check for the plugin yml
+    const pluginPath = path.join(currentFolder, pluginName)
+    devLog('checking for plugin', pluginPath)
+    if (!newRegistryInfo.awsProfile && fs.existsSync(pluginPath)) {
+      const content = fs.readFileSync(pluginPath, `utf8`)
+      const data = parseSyml(content)
+      newRegistryInfo.awsProfile = data['npmRegistryServerConfig']?.['awsProfile'] || ''
+      log('awsProfile', newRegistryInfo.awsProfile)
+    }
+
+    // Quit once we have both settings
+    if (newRegistryInfo.registryUrl && newRegistryInfo.awsProfile) {
       break
     }
 
@@ -62,11 +91,16 @@ export const setRegistryUrl = (filename: string, forceCheck = false) => {
     currentFolder = path.dirname(currentFolder)
   } while (true)
 
-  // If we have a new registryUrl and it is different from the current one,
+  // If we have a new registry settings and they different from the current one,
   // set it and reset the CA client
-  if (newRegistryUrl && newRegistryUrl !== registryUrl) {
+  if (newRegistryInfo.registryUrl && newRegistryInfo.registryUrl !== registryInfo.registryUrl) {
     cachedClient = undefined
-    registryUrl = newRegistryUrl
+    registryInfo.registryUrl = newRegistryInfo.registryUrl
+  }
+
+  if (newRegistryInfo.awsProfile && newRegistryInfo.awsProfile !== registryInfo.awsProfile) {
+    cachedClient = undefined
+    registryInfo.awsProfile = newRegistryInfo.awsProfile
   }
 }
 
@@ -77,21 +111,20 @@ export const setRegistryUrl = (filename: string, forceCheck = false) => {
  */
 export const getCodeArtifactClient = (): CAClient => {
   if (cachedClient) {
-    console.debug('Using cached CA Client')
+    devLog('Using cached CA Client')
     return cachedClient
   }
 
-  console.debug('Creating a CA Client. Will be cached after.')
+  devLog('Creating a CA Client. Will be cached after.')
 
-  const { domain, domainOwner, region } = parseRegistryUrl(registryUrl)!
+  const { domain, domainOwner, region, registryName } = parseRegistryUrl(registryInfo.registryUrl)!
 
-  const awsProfile = 'unqork-fetch'
   // const preferAwsEnvironmentCredentials = false
 
   const _defaultProvider = decorateDefaultCredentialProvider(defaultProvider)({
     // `awsProfile` that is any value (including `null` and `''`) should be provided as-is
     // `awsProfile` that is `undefined` should be excluded
-    ...(awsProfile !== undefined ? { profile: awsProfile } : {}),
+    ...(registryInfo.awsProfile !== undefined ? { profile: registryInfo.awsProfile } : {}),
   })
 
   // const credentials = miscUtils.parseOptionalBoolean(preferAwsEnvironmentCredentials)
@@ -107,7 +140,7 @@ export const getCodeArtifactClient = (): CAClient => {
 
   cachedClient = {
     client,
-    registryInfo: { domain, domainOwner, region },
+    registryInfo: { domain, domainOwner, region, registryName },
   }
 
   return cachedClient
@@ -118,6 +151,9 @@ const parseRegistryUrl = (registry: string): AuthorizationTokenParams | null => 
 
   if (!match) return null
 
+  const p = registry.split('/')
+  const registryName = p[p.length - 2] || p[p.length - 1]
+
   const [, domain, domainOwner, region]: string[] = match
-  return { domain, domainOwner, region }
+  return { domain, domainOwner, region, registryName }
 }

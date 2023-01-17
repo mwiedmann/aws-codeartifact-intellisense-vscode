@@ -1,8 +1,7 @@
 import { PackageSummary } from '@aws-sdk/client-codeartifact'
 import { Uri } from 'vscode'
 import { getCodeArtifactClient } from './auth'
-
-const repository = 'unqork-common'
+import { devLog } from './logging'
 
 const getNamespaceAndPackagePrefix = (q: string) => {
   let namespace: string | undefined = undefined
@@ -36,19 +35,19 @@ export const codeArtifactPackageQuery = async (q: string) => {
 
   const { namespace, packagePrefix } = getNamespaceAndPackagePrefix(q)
 
-  console.debug('codeArtifactPackageQuery', q, namespace, packagePrefix)
+  devLog('codeArtifactPackageQuery', q, namespace, packagePrefix)
 
   try {
     const packageResults = await client.listPackages({
       domain: registryInfo.domain,
-      repository,
+      repository: registryInfo.registryName,
       format: 'npm',
       namespace,
       packagePrefix,
     })
 
     client.send
-    console.debug('packageResults length', packageResults.packages?.length)
+    devLog('packageResults length', packageResults.packages?.length)
 
     let results: PackageSummaryAndVersion[] = []
 
@@ -63,6 +62,7 @@ export const codeArtifactPackageQuery = async (q: string) => {
           version,
         })
       }
+
       return results
     }
   } catch (ex) {
@@ -76,19 +76,19 @@ export const codeArtifactVersionQuery = async (packageName: string) => {
 
   const { namespace, packagePrefix } = getNamespaceAndPackagePrefix(packageName)
 
-  console.debug('codeArtifactVersionQuery', packageName, namespace, packagePrefix)
+  devLog('codeArtifactVersionQuery', packageName, namespace, packagePrefix)
 
   try {
     const versionResults = await client.listPackageVersions({
       domain: registryInfo.domain,
-      repository,
+      repository: registryInfo.registryName,
       format: 'npm',
       maxResults: 1,
       namespace,
       package: packagePrefix,
     })
 
-    console.debug('versionResults', versionResults.package)
+    devLog('versionResults', versionResults.package)
 
     return versionResults.defaultDisplayVersion
   } catch (ex) {
@@ -100,30 +100,30 @@ export const codeArtifactPackageInfo = async (pack: string, resource?: Uri) => {
   const { client, registryInfo } = getCodeArtifactClient()
 
   const { namespace, packagePrefix } = getNamespaceAndPackagePrefix(pack)
-  console.debug('codeArtifactPackageInfo', pack, namespace, packagePrefix)
+  devLog('codeArtifactPackageInfo', pack, namespace, packagePrefix)
 
   try {
     const versionResults = await client.listPackageVersions({
       domain: registryInfo.domain,
-      repository,
+      repository: registryInfo.registryName,
       format: 'npm',
       maxResults: 1,
       namespace,
       package: packagePrefix,
     })
 
-    console.debug('versionResults', versionResults.package)
+    devLog('versionResults', versionResults.package)
 
     const packageResults = await client.describePackageVersion({
       domain: registryInfo.domain,
-      repository,
+      repository: registryInfo.registryName,
       format: 'npm',
       namespace,
       package: packagePrefix,
       packageVersion: versionResults.defaultDisplayVersion,
     })
 
-    console.debug('packageResults', packageResults)
+    devLog('packageResults', packageResults)
 
     return packageResults
   } catch (ex) {

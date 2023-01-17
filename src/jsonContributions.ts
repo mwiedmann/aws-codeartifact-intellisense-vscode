@@ -22,7 +22,8 @@ import {
   Uri,
   MarkdownString,
 } from 'vscode'
-import { setRegistryUrl } from './auth'
+import { setRegistryInfo } from './auth'
+import { devLog } from './logging'
 
 export interface ISuggestionsCollector {
   add(suggestion: CompletionItem): void
@@ -64,8 +65,8 @@ export class JSONHoverProvider implements HoverProvider {
   constructor(private jsonContribution: IJSONContribution) {}
 
   public provideHover(document: TextDocument, position: Position, _token: CancellationToken): Thenable<Hover> | null {
-    console.debug('provideHover', document.fileName)
-    setRegistryUrl(document.fileName)
+    devLog('provideHover', document.fileName)
+    setRegistryInfo(document.fileName)
 
     const offset = document.offsetAt(position)
     const location = getLocation(document.getText(), offset)
@@ -110,8 +111,8 @@ export class JSONCompletionItemProvider implements CompletionItemProvider {
     position: Position,
     _token: CancellationToken,
   ): Thenable<CompletionList | null> | null {
-    console.debug('provideCompletionItems', document.fileName)
-    setRegistryUrl(document.fileName)
+    devLog('provideCompletionItems', document.fileName)
+    setRegistryInfo(document.fileName)
 
     this.lastResource = document.uri
 
