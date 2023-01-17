@@ -16,14 +16,14 @@ import {
 import { IJSONContribution, ISuggestionsCollector } from './jsonContributions'
 import { Location } from 'jsonc-parser'
 import { codeArtifactPackageInfo, codeArtifactPackageQuery, PackageSummaryAndVersion } from './queries'
-import { PackageSummary } from '@aws-sdk/client-codeartifact'
-
-const LIMIT = 40
-
-const USER_AGENT = 'Visual Studio Code'
 
 export class PackageJSONContribution implements IJSONContribution {
-  private knownScopes = ['@unqork']
+  private knownScopes: string[]
+
+  constructor() {
+    this.knownScopes = workspace.getConfiguration('awsCodeArtifactIntellisense').scopes
+    console.debug('Loaded scopes from config', this.knownScopes)
+  }
 
   public getDocumentSelector(): DocumentSelector {
     return [{ language: 'json', scheme: '*', pattern: '**/package.json' }]
@@ -109,6 +109,9 @@ export class PackageJSONContribution implements IJSONContribution {
             },
           )
       } else {
+        // The default extension in VSCode already handles this
+        // Perhaps we will have our own set of mostDependedOn in the future and will use this section
+
         // this.mostDependedOn.forEach((name) => {
         //   const insertText = new SnippetString().appendText(JSON.stringify(name))
         //   if (addValue) {

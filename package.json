@@ -10,6 +10,19 @@
     "Formatters",
     "Other"
   ],
+  "keywords": ["aws", "codeartifact"],
+  "contributes": {
+    "configuration": {
+      "title": "Scopes",
+      "properties": {
+        "awsCodeArtifactIntellisense.scopes": {
+          "type": "array",
+          "default": ["@unqork"],
+          "description": "List of npm scopes to suggest and restrict searches"
+        }
+      }
+    }
+  },
   "activationEvents": [
     "onLanguage:json"
   ],

@@ -16,7 +16,7 @@ type CAClient = {
   registryInfo: AuthorizationTokenParams
 }
 
-let registryUrl: string // = 'https://unqork-eng-682682801491.d.codeartifact.us-east-2.amazonaws.com/npm/unqork-common/'
+let registryUrl: string
 let cachedClient: CAClient | undefined
 
 /**
