@@ -22,6 +22,7 @@ import {
   Uri,
   MarkdownString,
 } from 'vscode'
+import { setRegistryUrl } from './auth'
 
 export interface ISuggestionsCollector {
   add(suggestion: CompletionItem): void
@@ -63,6 +64,9 @@ export class JSONHoverProvider implements HoverProvider {
   constructor(private jsonContribution: IJSONContribution) {}
 
   public provideHover(document: TextDocument, position: Position, _token: CancellationToken): Thenable<Hover> | null {
+    console.debug('provideHover', document.fileName)
+    setRegistryUrl(document.fileName)
+
     const offset = document.offsetAt(position)
     const location = getLocation(document.getText(), offset)
     if (!location.previousNode) {
@@ -106,6 +110,9 @@ export class JSONCompletionItemProvider implements CompletionItemProvider {
     position: Position,
     _token: CancellationToken,
   ): Thenable<CompletionList | null> | null {
+    console.debug('provideCompletionItems', document.fileName)
+    setRegistryUrl(document.fileName)
+
     this.lastResource = document.uri
 
     const currentWord = this.getCurrentWord(document, position)
@@ -176,7 +183,6 @@ export class JSONCompletionItemProvider implements CompletionItemProvider {
     }
     if (collectPromise) {
       return collectPromise.then(() => {
-        console.log('collectPromise.then', items.length, isIncomplete, items[0])
         if (items.length > 0 || isIncomplete) {
           return new CompletionList(items, isIncomplete)
         }
@@ -208,5 +214,3 @@ export class JSONCompletionItemProvider implements CompletionItemProvider {
     return scanner.scan() === SyntaxKind.ColonToken
   }
 }
-
-export const xhrDisabled = () => Promise.reject({ responseText: 'Use of online resources is disabled.' })

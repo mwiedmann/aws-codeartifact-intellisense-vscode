@@ -11,9 +11,6 @@ export async function activate(context: ExtensionContext) {
   // This line of code will only be executed once when your extension is activated
   console.log('aws-codeartifact-intellisense-vscode is active!')
 
-  // Cache a client so it is ready
-  await getCodeArtifactClient()
-
   context.subscriptions.push(addJSONProviders())
 }
 

@@ -1,6 +1,9 @@
 import { Codeartifact } from '@aws-sdk/client-codeartifact'
 import { decorateDefaultCredentialProvider } from '@aws-sdk/client-sts'
 import { defaultProvider } from '@aws-sdk/credential-provider-node'
+import { parseSyml } from '@yarnpkg/parsers'
+import fs from 'fs'
+import path from 'path'
 
 type AuthorizationTokenParams = {
   domain: string
@@ -13,17 +16,72 @@ type CAClient = {
   registryInfo: AuthorizationTokenParams
 }
 
-const registryUrl = 'https://unqork-eng-682682801491.d.codeartifact.us-east-2.amazonaws.com/npm/unqork-common/'
+let registryUrl: string // = 'https://unqork-eng-682682801491.d.codeartifact.us-east-2.amazonaws.com/npm/unqork-common/'
+let cachedClient: CAClient | undefined
 
-let cachedClient: CAClient
+/**
+ * Set the registry url from (yarn) config
+ *
+ * @param filename Opened package.json path. Search for yarn config with registry url starts here
+ * @param forceCheck Search for and read the yarn config even if a registry url is already set
+ * @returns void
+ */
+export const setRegistryUrl = (filename: string, forceCheck = false) => {
+  // Once the registryUrl is set, we will skip checking for a new one unless forced
+  // TODO: Its possible to have multiple registries, even by scope
+  // We could refactor this extension to support that, but for now it supports 1 registry
+  if (registryUrl && !forceCheck) {
+    return
+  }
 
+  const yarnrcName = '.yarnrc.yml'
+  let currentFolder = path.dirname(filename)
+  let newRegistryUrl = ''
+
+  // Find yarnrc.yml file
+  // There is also a global config to check?
+  // Also, env vars can hold the value as well?
+  do {
+    const yarnrcPath = path.join(currentFolder, yarnrcName)
+    console.debug('checking', yarnrcPath)
+
+    if (fs.existsSync(yarnrcPath)) {
+      const content = fs.readFileSync(yarnrcPath, `utf8`)
+      const data = parseSyml(content)
+      newRegistryUrl = data['npmRegistryServer']
+      console.debug('registryUrl', newRegistryUrl)
+      break
+    }
+
+    // Reached the root
+    if (path.dirname(currentFolder) === currentFolder) {
+      break
+    }
+
+    // Up 1 directory
+    currentFolder = path.dirname(currentFolder)
+  } while (true)
+
+  // If we have a new registryUrl and it is different from the current one,
+  // set it and reset the CA client
+  if (newRegistryUrl && newRegistryUrl !== registryUrl) {
+    cachedClient = undefined
+    registryUrl = newRegistryUrl
+  }
+}
+
+/**
+ * Get (create if needed) a Code Artifact client. The client is cached.
+ *
+ * @returns Code Artifact client
+ */
 export const getCodeArtifactClient = (): CAClient => {
   if (cachedClient) {
-    console.log('Using cached CA Client')
+    console.debug('Using cached CA Client')
     return cachedClient
   }
 
-  console.log('Creating a CA Client. Will be cached after.')
+  console.debug('Creating a CA Client. Will be cached after.')
 
   const { domain, domainOwner, region } = parseRegistryUrl(registryUrl)!
 
@@ -53,22 +111,6 @@ export const getCodeArtifactClient = (): CAClient => {
   }
 
   return cachedClient
-}
-
-const getTokenClient = async () => {
-  const { client, registryInfo } = getCodeArtifactClient()
-  const { domain, domainOwner, region } = registryInfo
-
-  const params = {
-    domain,
-    domainOwner,
-    // this should be more than enough time to complete the command
-    // we are not persisting this token anywhere once the command is complete
-    // https://docs.aws.amazon.com/codeartifact/latest/APIReference/API_GetAuthorizationToken.html#API_GetAuthorizationToken_RequestSyntax
-    durationSeconds: 900, // 15 minutes
-  }
-
-  const authorizationToken = (await client.getAuthorizationToken(params)).authorizationToken
 }
 
 const parseRegistryUrl = (registry: string): AuthorizationTokenParams | null => {

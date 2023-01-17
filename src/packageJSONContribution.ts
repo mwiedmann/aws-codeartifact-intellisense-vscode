@@ -71,14 +71,13 @@ export class PackageJSONContribution implements IJSONContribution {
       location.matches(['optionalDependencies']) ||
       location.matches(['peerDependencies'])
     ) {
-      console.log('collectPropertySuggestions', currentWord)
+      console.debug('collectPropertySuggestions', currentWord)
       if (currentWord.length > 0) {
         if (currentWord[0] === '@') {
           if (currentWord.indexOf('/') !== -1) {
             return this.collectScopedPackages(currentWord, addValue, isLast, collector)
           }
           for (const scope of this.knownScopes) {
-            console.log('Adding scope', scope)
             const proposal = new CompletionItem(scope)
             proposal.kind = CompletionItemKind.Property
             proposal.insertText = new SnippetString().appendText(`"${scope}/`).appendTabstop().appendText('"')
@@ -320,7 +319,6 @@ export class PackageJSONContribution implements IJSONContribution {
     collector: ISuggestionsCollector,
   ) {
     if (pack && pack.summary.package) {
-      console.log('processPackage', pack.summary.package, pack.summary.namespace)
       const name = `${pack.summary.namespace ? '@' + pack.summary.namespace + '/' : ''}${pack.summary.package}`
       const insertText = new SnippetString().appendText(JSON.stringify(name))
       if (addValue) {

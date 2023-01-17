@@ -48,6 +48,7 @@
     "@aws-sdk/client-sts": "^3.245.0",
     "@aws-sdk/credential-provider-node": "^3.245.0",
     "@aws-sdk/credential-provider-env": "^3.226.0",
-    "@aws-sdk/property-provider": "^3.226.0"
+    "@aws-sdk/property-provider": "^3.226.0",
+    "@yarnpkg/parsers": "^3.0.0-rc.35"
   }
 }

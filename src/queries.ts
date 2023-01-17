@@ -83,11 +83,12 @@ export const codeArtifactVersionQuery = async (packageName: string) => {
       domain: registryInfo.domain,
       repository,
       format: 'npm',
+      maxResults: 1,
       namespace,
       package: packagePrefix,
     })
 
-    console.debug('versionResults', versionResults)
+    console.debug('versionResults', versionResults.package)
 
     return versionResults.defaultDisplayVersion
   } catch (ex) {
@@ -106,11 +107,12 @@ export const codeArtifactPackageInfo = async (pack: string, resource?: Uri) => {
       domain: registryInfo.domain,
       repository,
       format: 'npm',
+      maxResults: 1,
       namespace,
       package: packagePrefix,
     })
 
-    console.debug('versionResults', versionResults)
+    console.debug('versionResults', versionResults.package)
 
     const packageResults = await client.describePackageVersion({
       domain: registryInfo.domain,
