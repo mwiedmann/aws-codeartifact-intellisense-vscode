@@ -31,6 +31,17 @@ let registryInfo: RegistryInfo = {
 let cachedClient: CAClient | undefined
 
 /**
+ * Clear the registry info so it will be configured on the next call.
+ * Use this when a new project has been opened or when the registry info could have changed.
+ */
+export const clearRegistryInfo = () => {
+  registryInfo = {
+    registryUrl: '',
+    awsProfile: '',
+  }
+}
+
+/**
  * Set the registry url from (yarn) config
  *
  * @param filename Opened package.json path. Search for yarn config with registry url starts here

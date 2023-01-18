@@ -133,4 +133,5 @@ export const cacheGetPackage = (name: string) => {
  */
 export const cacheReset = () => {
   packageCache.clear()
+  setCacheState('empty')
 }

@@ -1,6 +1,6 @@
 # aws-codeartifact-intellisense-vscode
 
-This extension for VSCode will add package.json dependencies IntelliSense support for AWS CodeArtifact repositories.
+This extension for VSCode will add package.json dependencies IntelliSense support for AWS CodeArtifact repositories when using `yarn berry` and its CodeArtifact plugin.
 
 Why: VSCode has a built in extension that has support for npm and several other public repositories, but if you are using an AWS CodeArtifact repo, you get no IntelliSense in your package.json for packages that only exist in CodeArtifact. This extension adds that support.
 
@@ -10,6 +10,8 @@ The extension assume a few things (scoped packages, yarn berry with a plugin). S
 
 - Package name and version suggestions
 - Hover details
+- Package detail caching
+- `reset` command is available through the Command Palette and the "..." editor title menu
 
 ## Requirements
 
@@ -29,7 +31,9 @@ The extension searches for these config files starting in the directory of the p
 This extension contributes the following settings:
 
 * `awsCodeArtifactIntellisense.scopes`: An array of scopes (@yourcompany) to suggest and restrict searches
+* `awsCodeArtifactIntellisense.cache`: Boolean controlling if the cache is used. Otherwise, api calls to CA are repeated.
+* `awsCodeArtifactIntellisense.detailedLogs`: Boolean controlling if detailed logs are output. This can help troubleshooting.
 
 ## Known Issues
 
-Queries can be slow (especially initial queries). Researching the cause.
+Queries can be slow against CodeArtifact (especially initial queries). There is aggressive caching to help this. The first query will pull down a listing of all scoped packages to get things seeded. Use the `reset` command to clear the cache when you need updated package information.

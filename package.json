@@ -12,6 +12,19 @@
   ],
   "keywords": ["aws", "codeartifact"],
   "contributes": {
+    "menus": {
+      "editor/title": [
+        {
+          "command": "awsCodeArtifactIntellisense.reset"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "awsCodeArtifactIntellisense.reset",
+        "title": "Reset AWS CodeArtifact Extension cache"
+      }
+    ],
     "configuration": {
       "title": "Settings",
       "properties": {
