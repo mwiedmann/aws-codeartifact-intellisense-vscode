@@ -13,12 +13,22 @@
   "keywords": ["aws", "codeartifact"],
   "contributes": {
     "configuration": {
-      "title": "Scopes",
+      "title": "Settings",
       "properties": {
         "awsCodeArtifactIntellisense.scopes": {
           "type": "array",
           "default": ["@unqork"],
           "description": "List of npm scopes to suggest and restrict searches"
+        },
+        "awsCodeArtifactIntellisense.cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use a cache to limit queries and improve speed"
+        },
+        "awsCodeArtifactIntellisense.detailedLogs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Output detailed logs. Can help with troubleshooting."
         }
       }
     }

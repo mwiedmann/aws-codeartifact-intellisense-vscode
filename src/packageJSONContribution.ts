@@ -15,7 +15,7 @@ import {
 } from 'vscode'
 import { IJSONContribution, ISuggestionsCollector } from './jsonContributions'
 import { Location } from 'jsonc-parser'
-import { codeArtifactPackageInfo, codeArtifactPackageQuery, PackageSummaryAndVersion } from './queries'
+import { codeArtifactPackageInfo, codeArtifactPackageQuery, PackageInfoBasic } from './queries'
 import { devLog, log } from './logging'
 
 export class PackageJSONContribution implements IJSONContribution {
@@ -136,12 +136,12 @@ export class PackageJSONContribution implements IJSONContribution {
     return null
   }
 
-  private collectScopedPackages(
+  private async collectScopedPackages(
     currentWord: string,
     addValue: boolean,
     isLast: boolean,
     collector: ISuggestionsCollector,
-  ): Thenable<any> {
+  ): Promise<any> {
     const segments = currentWord.split('/')
     if (segments.length === 2 && segments[0].length > 1) {
       const scope = segments[0].substr(1)
@@ -283,9 +283,9 @@ export class PackageJSONContribution implements IJSONContribution {
     const results = await codeArtifactPackageInfo(pack)
     if (results) {
       return {
-        description: results.packageVersion?.summary || '',
-        version: results.packageVersion?.version,
-        homepage: results.packageVersion?.homePage,
+        description: results.description || '',
+        version: results.latestVersion,
+        homepage: results.homepage || '',
       }
     }
     return undefined
@@ -316,19 +316,13 @@ export class PackageJSONContribution implements IJSONContribution {
     return null
   }
 
-  private processPackage(
-    pack: PackageSummaryAndVersion,
-    addValue: boolean,
-    isLast: boolean,
-    collector: ISuggestionsCollector,
-  ) {
-    if (pack && pack.summary.package) {
-      const name = `${pack.summary.namespace ? '@' + pack.summary.namespace + '/' : ''}${pack.summary.package}`
-      const insertText = new SnippetString().appendText(JSON.stringify(name))
+  private processPackage(pack: PackageInfoBasic, addValue: boolean, isLast: boolean, collector: ISuggestionsCollector) {
+    if (pack && pack.name) {
+      const insertText = new SnippetString().appendText(JSON.stringify(pack.name))
       if (addValue) {
         insertText.appendText(': "')
-        if (pack.version) {
-          insertText.appendVariable('version', pack.version)
+        if (pack.latestVersion) {
+          insertText.appendVariable('version', pack.latestVersion)
         } else {
           insertText.appendTabstop()
         }
@@ -338,10 +332,10 @@ export class PackageJSONContribution implements IJSONContribution {
           insertText.appendText(',')
         }
       }
-      const proposal = new CompletionItem(name)
+      const proposal = new CompletionItem(pack.name)
       proposal.kind = CompletionItemKind.Property
       proposal.insertText = insertText
-      proposal.filterText = JSON.stringify(name)
+      proposal.filterText = JSON.stringify(pack.name)
       // proposal.documentation = this.getDocumentation(pack.description, pack.version, pack?.links?.homepage)
       collector.add(proposal)
     }

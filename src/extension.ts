@@ -1,6 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import { ExtensionContext } from 'vscode'
+import { ExtensionContext, workspace } from 'vscode'
+import { setCacheState } from './cache'
 import { addJSONProviders } from './jsonContributions'
 import { setLoggingMode } from './logging'
 
@@ -11,8 +12,18 @@ export async function activate(context: ExtensionContext) {
   // This line of code will only be executed once when your extension is activated
   console.log('aws-codeartifact-intellisense-vscode is active!')
 
-  // Uncomment this to show a lot of additional logging
-  // setLoggingMode('dev')
+  const extensionSettings = (({ cache, detailedLogs, scopes }: any) => ({ cache, detailedLogs, scopes }))(
+    workspace.getConfiguration('awsCodeArtifactIntellisense'),
+  )
+
+  console.log('aws-codeartifact-intellisense-vscode settings loaded', extensionSettings)
+
+  if (!extensionSettings.cache) {
+    setCacheState('disabled')
+  }
+
+  // 'dev' will show much more detailed logs
+  setLoggingMode(extensionSettings.detailedLogs ? 'dev' : 'prod')
 
   context.subscriptions.push(addJSONProviders())
 }

@@ -21,9 +21,11 @@ import {
   Disposable,
   Uri,
   MarkdownString,
+  workspace,
 } from 'vscode'
 import { setRegistryInfo } from './auth'
 import { devLog } from './logging'
+import { codeArtifactScopesInit } from './queries'
 
 export interface ISuggestionsCollector {
   add(suggestion: CompletionItem): void
@@ -62,16 +64,29 @@ export function addJSONProviders(): Disposable {
 }
 
 export class JSONHoverProvider implements HoverProvider {
-  constructor(private jsonContribution: IJSONContribution) {}
+  private knownScopes: string[]
 
-  public provideHover(document: TextDocument, position: Position, _token: CancellationToken): Thenable<Hover> | null {
+  constructor(private jsonContribution: IJSONContribution) {
+    this.knownScopes = workspace.getConfiguration('awsCodeArtifactIntellisense').scopes
+  }
+
+  public async provideHover(
+    document: TextDocument,
+    position: Position,
+    _token: CancellationToken,
+  ): Promise<Hover | null> {
     devLog('provideHover', document.fileName)
     setRegistryInfo(document.fileName)
+
+    // See if the cache needs to be updated
+    // This will block the first Hover, but the initial query is
+    // always slow anyways and this at least gets the cache started
+    await codeArtifactScopesInit(this.knownScopes)
 
     const offset = document.offsetAt(position)
     const location = getLocation(document.getText(), offset)
     if (!location.previousNode) {
-      return null
+      return Promise.resolve(null)
     }
     const node = location.previousNode
     if (node && node.offset <= offset && offset <= node.offset + node.length) {
@@ -87,14 +102,17 @@ export class JSONHoverProvider implements HoverProvider {
         })
       }
     }
-    return null
+    return Promise.resolve(null)
   }
 }
 
 export class JSONCompletionItemProvider implements CompletionItemProvider {
   private lastResource: Uri | undefined
+  private knownScopes: string[]
 
-  constructor(private jsonContribution: IJSONContribution) {}
+  constructor(private jsonContribution: IJSONContribution) {
+    this.knownScopes = workspace.getConfiguration('awsCodeArtifactIntellisense').scopes
+  }
 
   public resolveCompletionItem(item: CompletionItem, _token: CancellationToken): Thenable<CompletionItem | null> {
     if (this.jsonContribution.resolveSuggestion) {
@@ -106,13 +124,18 @@ export class JSONCompletionItemProvider implements CompletionItemProvider {
     return Promise.resolve(item)
   }
 
-  public provideCompletionItems(
+  public async provideCompletionItems(
     document: TextDocument,
     position: Position,
     _token: CancellationToken,
-  ): Thenable<CompletionList | null> | null {
+  ): Promise<CompletionList | null> {
     devLog('provideCompletionItems', document.fileName)
     setRegistryInfo(document.fileName)
+
+    // See if the cache needs to be updated
+    // This will block the first Hover, but the initial query is
+    // always slow anyways and this at least gets the cache started
+    await codeArtifactScopesInit(this.knownScopes)
 
     this.lastResource = document.uri
 
